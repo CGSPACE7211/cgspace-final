@@ -16,9 +16,7 @@ export async function GET() {
       },
     });
 
-    if (!response.ok) throw new Error('Notion Sync Failed');
     const data = await response.json();
-
     const menuItems = [];
     let posterImages = [];
     let unitImage = null;
@@ -30,37 +28,31 @@ export async function GET() {
       if (!active) return;
 
       const name = props.Name?.title[0]?.plain_text || '';
-      const price = props.Price?.number || 0;
-      const category = props.Category?.select?.name || 'Others';
-      const specialTag = props.Special_Tag?.rich_text[0]?.plain_text || '';
+      const category = props.Category?.select?.name || '';
       
-      // 🚀 抓取这个格子里包含的所有图片文件链接
-      const urls = props.Image?.files?.map(f => f.file?.url || f.external?.url).filter(Boolean) || [];
+      // 🚀 核心改进：无论你在一个格子里传了几张图，全部抓出来！
+      const files = props.Image?.files || [];
+      const urls = files.map(f => f.file?.url || f.external?.url).filter(Boolean);
 
       if (name.toUpperCase() === 'UNIT') {
-        if (urls.length > 0) unitImage = urls[0];
+        unitImage = urls[0] || null;
       } else if (name.toUpperCase() === 'LOGO') {
-        if (urls.length > 0) logoImage = urls[0];
+        logoImage = urls[0] || null;
       } else if (category.toUpperCase() === 'POSTER') {
+        // 如果这行是海报，把它格子里所有的图都塞进轮播池
         posterImages = [...posterImages, ...urls];
       } else {
         menuItems.push({
           id: page.id,
           name,
-          price,
-          category,
-          specialTag
+          price: props.Price?.number || 0,
+          category: category || 'Others',
+          specialTag: props.Special_Tag?.rich_text[0]?.plain_text || ''
         });
       }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      menuItems, 
-      posterImages, 
-      unitImage, 
-      logoImage 
-    });
+    return NextResponse.json({ success: true, menuItems, posterImages, unitImage, logoImage });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
