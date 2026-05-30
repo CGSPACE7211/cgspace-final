@@ -3,11 +3,15 @@ import { useState, useEffect } from 'react';
 
 export default function DigitalSignage() {
   const [menuData, setMenuData] = useState([]);
+  const [allLiveImages, setAllLiveImages] = useState([]); // ⚡ 动态多图轮播池
   const [time, setTime] = useState('');
   const [loading, setLoading] = useState(true);
+  
   const [currentSlide, setCurrentSlide] = useState(0); 
-  const [playMode, setPlayMode] = useState('loop'); // 'loop' (自动连播), 'lock-menu' (锁死菜单), 'lock-poster' (锁死海报)
+  const [currentPosterIdx, setCurrentPosterIdx] = useState(0); // ⚡ 控制自主上传的多图连播
+  const [playMode, setPlayMode] = useState('loop'); 
 
+  // 1. 系统精准时钟
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -16,18 +20,24 @@ export default function DigitalSignage() {
     return () => clearInterval(timer);
   }, []);
 
+  // 2. 核心：实时数据引渡雷达（自动捕获多图）
   useEffect(() => {
     const fetchMenu = async () => {
       try {
         const res = await fetch('/api/menu');
         const json = await res.json();
         if (json.success) {
+          // 按品类分组
           const grouped = json.data.reduce((acc, item) => {
             if (!acc[item.category]) acc[item.category] = [];
             acc[item.category].push(item);
             return acc;
           }, {});
           setMenuData(grouped);
+
+          // 🚀 黑科技：把你在 Notion 单元格里上传的所有图片，自动收集聚拢成一个“无上限连播池”
+          const images = json.data.map(item => item.imageUrl).filter(Boolean);
+          setAllLiveImages(images);
         }
       } catch (err) { console.error("Sync Error"); } 
       finally { setLoading(false); }
@@ -37,107 +47,156 @@ export default function DigitalSignage() {
     return () => clearInterval(dataTimer);
   }, []);
 
-  // 7秒自动连播控制
+  // 3. 大版面轮播切换逻辑（菜单 ➔ 海报）
   useEffect(() => {
     if (playMode !== 'loop') return;
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
-    }, 7000);
+    }, 8000); // 每 8 秒丝滑转场
     return () => clearInterval(slideTimer);
   }, [playMode]);
 
+  // 4. 🚀 核心：海报内部的“用户多图自主连播”逻辑！
+  useEffect(() => {
+    if (allLiveImages.length <= 1) return;
+    const posterTimer = setInterval(() => {
+      setCurrentPosterIdx((prev) => (prev + 1) % allLiveImages.length);
+    }, 4000); // 你在 Notion 传的多张图，每 4 秒自动丝滑切下一张！
+    return () => clearInterval(posterTimer);
+  }, [allLiveImages]);
+
   if (loading) return (
-    <div className="h-screen w-screen bg-[#1A1A1A] flex items-center justify-center text-[#F4F1EA] font-mono tracking-widest text-xs">
-      °C / g . SPACE // PREMIUM SIGNAGE SYSTEM INITIALIZING...
+    <div className="h-screen w-screen bg-[#F4F1EA] flex items-center justify-center text-zinc-400 font-mono tracking-widest text-xs">
+      °C / g . SPACE // ART DIRECTION ENGINE INITIALIZING...
     </div>
   );
 
-  // 提取你在 Notion 表格里上传的第一张海报图，如果没有上传，自动使用精美建筑背景作为兜底
-  const firstLiveImage = Object.values(menuData).flat().find(item => item.imageUrl)?.imageUrl 
-    || "https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=1200&q=80";
+  // 兜底图池（万一你 Notion 没传图，自动采用这些顶级美学大图撑场子）
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=1200&q=80"
+  ];
+  const displayImagePool = allLiveImages.length > 0 ? allLiveImages : fallbackImages;
 
   return (
-    <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] p-12 flex flex-col justify-between overflow-hidden select-none">
+    <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] p-16 flex flex-col justify-between overflow-hidden select-none transition-all duration-1000">
       
-      {/* HEADER */}
-      <div className="flex justify-between items-center border-b-2 border-black pb-6">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter text-black">°C / g . SPACE</h1>
-          <p className="font-mono text-xs text-zinc-500 tracking-widest mt-1">BROOKLYN LAB // PREMIUM SIGNAGE v3.0</p>
+      {/* 👑 砍掉死板样式，换上顶级设计杂志风格的 HEADER */}
+      <div className="flex justify-between items-baseline border-b border-[#1A1A1A]/10 pb-6">
+        <div className="flex items-baseline space-x-6">
+          <h1 className="text-4xl font-extrabold tracking-tighter text-black font-serif italic">°C / g . SPACE</h1>
+          <span className="font-mono text-[10px] text-zinc-400 tracking-[0.2em] uppercase">Brooklyn Lab // Premium Signage v4.0</span>
         </div>
         
-        {/* 控制台 - 完美支持店员手动直控 */}
+        {/* 精致扁平化中控台 */}
         <div className="flex items-center space-x-8 font-mono text-xs">
-          <div className="flex bg-black/5 p-1 rounded-lg border border-black/10 space-x-1">
-            <button onClick={() => { setPlayMode('loop'); }} className={`px-2.5 py-1 rounded transition-all ${playMode === 'loop' ? 'bg-amber-500 text-black font-bold' : 'text-zinc-500'}`}>🔄 连播</button>
-            <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`px-2.5 py-1 rounded transition-all ${playMode === 'lock-menu' ? 'bg-black text-white font-bold' : 'text-zinc-500'}`}>🔒 菜单</button>
-            <button onClick={() => { setPlayMode('lock-poster'); setCurrentSlide(1); }} className={`px-2.5 py-1 rounded transition-all ${playMode === 'lock-poster' ? 'bg-black text-white font-bold' : 'text-zinc-500'}`}>🔒 海报</button>
+          <div className="flex bg-[#1A1A1A]/5 p-0.5 rounded-md border border-[#1A1A1A]/5 space-x-1">
+            <button onClick={() => { setPlayMode('loop'); }} className={`px-3 py-1 rounded transition-all ${playMode === 'loop' ? 'bg-black text-white font-bold' : 'text-zinc-500 opacity-60'}`}>🔄 智能连播</button>
+            <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`px-3 py-1 rounded transition-all ${playMode === 'lock-menu' ? 'bg-black text-white font-bold' : 'text-zinc-500 opacity-60'}`}>🔒 锁菜单</button>
+            <button onClick={() => { setPlayMode('lock-poster'); setCurrentSlide(1); }} className={`px-3 py-1 rounded transition-all ${playMode === 'lock-poster' ? 'bg-black text-white font-bold' : 'text-zinc-500 opacity-60'}`}>🔒 锁海报</button>
           </div>
-          <div className="text-right">
-            <div className="text-zinc-400 text-[10px]">REALTIME_CLOCK</div>
-            <div className="text-xl font-black tabular-nums">{time}</div>
+          <div className="text-right border-l border-[#1A1A1A]/10 pl-6">
+            <span className="text-xl font-bold tracking-tight tabular-nums text-black">{time}</span>
           </div>
         </div>
       </div>
 
-      {/* STAGE CONTAINER */}
-      <div className="flex-1 my-6 relative w-full h-full">
+      {/* 主画布内容区 */}
+      <div className="flex-1 my-8 relative w-full h-full">
         
-        {/* SLIDE 0: DYNAMIC MENU */}
-        <div className={`absolute inset-0 grid grid-cols-2 gap-12 items-center transition-all duration-700 ${currentSlide === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        {/* 🎬 画面 A：高级轻量卡片化菜单（彻底砍掉死板黑边） */}
+        <div className={`absolute inset-0 grid grid-cols-2 gap-16 items-center transition-all duration-1000 transform ${currentSlide === 0 ? 'opacity-100 scale-100 translate-x-0' : 'opacity-0 scale-98 translate-x-4 pointer-events-none'}`}>
           {Object.keys(menuData).length === 0 ? (
-            <div className="col-span-2 text-center text-zinc-400 font-mono text-sm">Awaiting active items from Notion...</div>
+            <div className="col-span-2 text-center text-zinc-400 font-mono text-sm animate-pulse">Awaiting design synchronization from Notion...</div>
           ) : (
             Object.keys(menuData).map((category) => (
-              <div key={category} className="bg-white border-2 border-black p-8 h-[90%] flex flex-col justify-between rounded-2xl shadow-[8px_8px_0px_0px_rgba(26,26,26,1)]">
+              <div key={category} className="h-[90%] flex flex-col justify-between border-t-2 border-black/40 pt-6">
                 <div>
-                  <div className="border-b border-black/10 pb-3 mb-6">
-                    <span className="font-mono text-xs bg-black text-white px-3 py-1 rounded-sm uppercase tracking-widest">[{category}]</span>
+                  <div className="flex justify-between items-center mb-8">
+                    <span className="font-mono text-xs bg-black text-[#F4F1EA] px-3 py-0.5 tracking-widest rounded-sm uppercase font-bold">
+                      [{category}]
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400 tracking-widest uppercase">LIVE_DATABASE</span>
                   </div>
-                  <div className="space-y-6">
+                  
+                  <div className="space-y-8">
                     {menuData[category].map((item) => (
-                      <div key={item.id} className="flex justify-between items-baseline">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-3xl font-black tracking-tight">{item.name}</span>
-                          {item.specialTag && <span className="font-mono text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">{item.specialTag}</span>}
+                      <div key={item.id} className="flex justify-between items-baseline group">
+                        <div className="flex items-center space-x-4">
+                          <span className="text-3xl font-bold tracking-tight text-black font-sans">{item.name}</span>
+                          {item.specialTag && (
+                            <span className="font-mono text-[9px] bg-amber-500 text-black px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider animate-pulse">
+                              {item.specialTag}
+                            </span>
+                          )}
                         </div>
-                        <div className="flex-1 border-b-2 border-dashed border-black/10 mx-4 relative top-[-6px]"></div>
-                        <span className="font-mono text-2xl font-black">${item.price.toFixed(2)}</span>
+                        <div className="flex-1 border-b border-dashed border-[#1A1A1A]/10 mx-6 relative top-[-6px]"></div>
+                        <span className="font-mono text-2xl font-extrabold text-black tracking-tighter">
+                          ${item.price.toFixed(2)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="font-mono text-[9px] text-zinc-400 tracking-widest">// PARAMETRIC WEIGHED UNIT</div>
+                
+                <div className="font-mono text-[9px] text-zinc-400 tracking-widest uppercase mt-4">// TEMPERATURE & MASS FORMULATED IN REALTIME</div>
               </div>
             ))
           )}
         </div>
 
-        {/* SLIDE 1: HERO IMAGE POSTER */}
-        <div className={`absolute inset-0 grid grid-cols-12 gap-8 items-center transition-all duration-700 ${currentSlide === 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-          <div className="col-span-7 h-full relative border-2 border-black rounded-2xl overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,0.15)] bg-zinc-800">
-            {/* 📸 这里会自动、实时拉取你在 Notion 里面长传的精美海报图！ */}
-            <img src={firstLiveImage} alt="Notion Live Visual" className="absolute inset-0 w-full h-full object-cover opacity-95 transition-all duration-1000 scale-100 hover:scale-105" />
-            <div className="absolute top-4 left-4 bg-black/80 text-white px-3 py-1 text-[10px] font-mono tracking-widest rounded">LIVE_NOTION_IMAGE_FEED</div>
+        {/* 🎬 画面 B：星巴克级巨幕单品连播大图（左大图，右高级促销排版） */}
+        <div className={`absolute inset-0 grid grid-cols-12 gap-12 items-center transition-all duration-1000 transform ${currentSlide === 1 ? 'opacity-100 scale-100 translate-x-0' : 'opacity-0 scale-98 -translate-x-4 pointer-events-none'}`}>
+          
+          {/* 左侧：多大图自主变身连播池 */}
+          <div className="col-span-7 h-[95%] relative bg-zinc-100 rounded-3xl overflow-hidden shadow-sm border border-black/5">
+            {displayImagePool.map((imgUrl, index) => (
+              <img 
+                key={index}
+                src={imgUrl} 
+                alt="Live Poster Feed" 
+                className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 transform ${index === currentPosterIdx ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'}`}
+              />
+            ))}
+            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm text-white px-3 py-1 text-[9px] font-mono tracking-widest rounded-sm uppercase">
+              NOTION_PLAYLIST // SLIDE_0{currentPosterIdx + 1}
+            </div>
           </div>
-          <div className="col-span-5 bg-black text-[#F4F1EA] p-10 h-full rounded-2xl flex flex-col justify-between">
+
+          {/* 右侧：契合你店里高级调性的文案排版 */}
+          <div className="col-span-5 bg-black text-[#F4F1EA] p-12 h-[95%] rounded-3xl flex flex-col justify-between shadow-xl">
             <div>
-              <div className="font-mono text-amber-400 text-xs tracking-widest mb-2">// BRAND LAB FEATURED</div>
-              <h2 className="text-5xl font-black tracking-tighter leading-none text-white uppercase mb-4">DAILY FRESH<br/><span className="text-amber-400">CAKE & DRINKS</span><br/>SERIES</h2>
-              <p className="text-zinc-400 text-xs font-mono leading-relaxed">Every recipe is formulated and weighed down to the absolute decimal. Experience the seamless fusion of design and flavor.</p>
+              <div className="font-mono text-amber-400 text-xs tracking-[0.2em] uppercase mb-4">// BRAND CONCEPT LOOKBOOK</div>
+              <h2 className="text-5xl font-black tracking-tighter leading-none text-white uppercase font-serif italic mb-6">
+                DAILY FRESH<br/>LAB SELECTION
+              </h2>
+              <p className="text-zinc-400 text-sm leading-relaxed tracking-wide font-light font-sans">
+                Every formulation is meticulously balanced and mathematically cataloged down to 0.1 grams. Fueling your creative workflow through premium taste and aesthetic geometry.
+              </p>
             </div>
-            <div className="border-t border-zinc-800 pt-4 flex justify-between items-center text-xs text-zinc-400 font-mono">
-              <span>LOCATION // BROOKLYN LAB</span>
-              <span className="text-amber-400 animate-pulse">● LIVE SYNCED</span>
+
+            <div className="border-t border-zinc-800/80 pt-6">
+              <div className="flex justify-between items-center mb-2 font-mono text-xs text-zinc-500 uppercase tracking-widest">
+                <span>LAB_SPACE</span>
+                <span className="font-bold text-white">BROOKLYN, NY</span>
+              </div>
+              <div className="text-[10px] text-amber-400 font-mono tracking-wider uppercase animate-pulse">
+                ● AUTOPLAY ACTIVE // SYNC FREQ 1.0s
+              </div>
             </div>
           </div>
+
         </div>
 
       </div>
 
       {/* FOOTER */}
-      <div className="border-t-2 border-black pt-4 flex justify-between items-center font-mono text-[10px] text-zinc-400">
-        <div>CORE_ENGINE_V3.0 // NO SUBSCRIPTION FEE</div>
+      <div className="border-t border-[#1A1A1A]/10 pt-4 flex justify-between items-center font-mono text-[9px] text-zinc-400 tracking-widest uppercase">
+        <div className="flex items-center space-x-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></span>
+          <span>SYSTEM_STATUS // RUNNING_SECURE_BRIDGE_V4.0</span>
+        </div>
+        <div>[ REAL-TIME MULTI-IMAGE CAROUSEL ENGINE READY ]</div>
         <div>© 2026 CGSPACE.NYC</div>
       </div>
     </div>
