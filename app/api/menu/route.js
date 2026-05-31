@@ -30,37 +30,33 @@ export async function GET() {
       if (!active) return;
 
       const name = props.Name?.title[0]?.plain_text || '';
-      const price = props.Price?.number || 0;
-      const category = props.Category?.select?.name || 'Others';
-      const specialTag = props.Special_Tag?.rich_text[0]?.plain_text || '';
+      const category = props.Category?.select?.name || '';
+      // 🚀 新增：读取你在 Notion 填写的屏幕编号，如果没填就默认是 'ALL' (全屏显示)
+      const screen = props.Screen?.select?.name || 'ALL';
       
-      // 🚀 抓取这个格子里包含的所有图片文件链接
-      const urls = props.Image?.files?.map(f => f.file?.url || f.external?.url).filter(Boolean) || [];
+      const files = props.Image?.files || [];
+      const urls = files.map(f => f.file?.url || f.external?.url).filter(Boolean);
 
       if (name.toUpperCase() === 'UNIT') {
-        if (urls.length > 0) unitImage = urls[0];
+        unitImage = urls[0] || null;
       } else if (name.toUpperCase() === 'LOGO') {
-        if (urls.length > 0) logoImage = urls[0];
+        logoImage = urls[0] || null;
       } else if (category.toUpperCase() === 'POSTER') {
-        posterImages = [...posterImages, ...urls];
+        // 把海报链接和对应的屏幕编号一起存起来
+        urls.forEach(url => posterImages.push({ url, screen }));
       } else {
         menuItems.push({
           id: page.id,
           name,
-          price,
-          category,
-          specialTag
+          price: props.Price?.number || 0,
+          category: category || 'Others',
+          specialTag: props.Special_Tag?.rich_text[0]?.plain_text || '',
+          screen // 把菜单的屏幕编号也存起来
         });
       }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      menuItems, 
-      posterImages, 
-      unitImage, 
-      logoImage 
-    });
+    return NextResponse.json({ success: true, menuItems, posterImages, unitImage, logoImage });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
