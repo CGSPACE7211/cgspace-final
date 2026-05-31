@@ -191,7 +191,7 @@ export default function DigitalSignage() {
           {/* 右侧：插画小人 */}
           <div className="w-5/12 flex items-center justify-center relative">
             <div className="absolute w-80 h-80 bg-amber-200/20 rounded-full blur-3xl"></div>
-            {unitImg && <img src={unitImg} className="relative z-10 max-h-[70%] object-contain drop-shadow-2xl" style={{ animation: 'float 4s ease-in-out infinite' }} />}
+            {unitImg && <img src={unitImg} className="relative z-10 max-h-[70%] object-contain drop-shadow-2xl mix-blend-multiply" style={{ animation: 'float 4s ease-in-out infinite' }} />}
           </div>
         </div>
 
