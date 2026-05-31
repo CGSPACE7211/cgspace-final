@@ -45,47 +45,63 @@ export default function DigitalSignage() {
     return () => clearInterval(syncTimer);
   }, []);
 
-  // 3. 🚀 主理人专属定制：菜单与海报的【穿插式连播】
+  // 3. 菜单与海报的【连播/锁定】逻辑
   useEffect(() => {
-    // 如果没有海报，就永远锁死在菜单页
-    if (playMode !== 'loop' || posters.length === 0) {
-      setCurrentSlide(0); 
+    // 如果主理人按下了锁定键，或者没有海报，就暂停整体的大翻页定时器
+    if (playMode !== 'loop') return;
+    if (posters.length === 0) {
+      setCurrentSlide(0);
       return;
     }
     
-    // 每 8 秒在“菜单(0)”和“海报(1)”之间切换一次
+    // 自动模式下：每 8 秒在“菜单”和“海报”之间切换
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
     }, 8000); 
-
     return () => clearInterval(slideTimer);
   }, [playMode, posters.length]);
 
-  // 4. 🚀 核心黑科技：当画面切回菜单时，在后台悄悄准备下一张海报！
+  // 4. 海报内部的多图轮换逻辑
   useEffect(() => {
-    if (currentSlide === 0 && posters.length > 1) {
-      // 延迟 1.5 秒（等旧海报完全淡出不可见后），悄悄把海报源换成下一张
-      const hideTimer = setTimeout(() => {
-        setPosterIdx((prev) => (prev + 1) % posters.length);
-      }, 1500);
-      return () => clearTimeout(hideTimer);
+    if (posters.length <= 1) return;
+
+    if (playMode === 'loop') {
+      // 穿插模式：趁着屏幕显示菜单（0）的时候，在后台悄悄准备下一张海报
+      if (currentSlide === 0) {
+        const hideTimer = setTimeout(() => {
+          setPosterIdx((prev) => (prev + 1) % posters.length);
+        }, 1500);
+        return () => clearTimeout(hideTimer);
+      }
+    } else if (playMode === 'lock-poster') {
+      // 锁定海报模式：大屏幕锁死在海报页，里面的多张海报每 4 秒自动轮换
+      if (currentSlide === 1) {
+        const pTimer = setInterval(() => {
+          setPosterIdx((prev) => (prev + 1) % posters.length);
+        }, 4000);
+        return () => clearInterval(pTimer);
+      }
     }
-  }, [currentSlide, posters.length]);
+  }, [currentSlide, posters.length, playMode]);
 
   if (loading) return <div className="h-screen w-screen bg-[#F4F1EA] flex items-center justify-center font-mono text-xs italic tracking-widest text-zinc-400">°C / g . SPACE // MATRIX SYNCING...</div>;
 
   return (
     <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] p-16 flex flex-col justify-between overflow-hidden">
       
-      {/* ☁️ 顶部状态栏 */}
+      {/* ☁️ 顶部状态栏 & 控制台 */}
       <div className="absolute top-0 left-0 w-full px-16 py-8 flex justify-between items-center z-50">
         <div className="flex items-center space-x-6 bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/40 shadow-sm">
           {logoImg ? <img src={logoImg} className="h-14 object-contain" alt="Logo" /> : <span className="text-2xl font-black italic">°C / g . SPACE</span>}
           <div className="w-px h-4 bg-black/10"></div>
           <span className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase">☀️ NY 74°F SUNNY</span>
         </div>
-        <div className="flex items-center space-x-8 font-mono text-xs font-bold text-black bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/40 shadow-sm">
-          <span className={playMode === 'loop' ? 'text-amber-600' : 'opacity-30'}>AUTOPLAY</span>
+        
+        {/* 🚀 加回来的高端操控台！ */}
+        <div className="flex items-center space-x-6 font-mono text-xs font-bold text-black bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/40 shadow-sm cursor-pointer">
+          <button onClick={() => setPlayMode('loop')} className={`transition-all ${playMode === 'loop' ? 'text-amber-600' : 'opacity-40 hover:opacity-100'}`}>🔄 AUTOPLAY</button>
+          <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`transition-all ${playMode === 'lock-menu' ? 'text-black' : 'opacity-40 hover:opacity-100'}`}>🔒 MENU</button>
+          <button onClick={() => { setPlayMode('lock-poster'); setCurrentSlide(1); }} className={`transition-all ${playMode === 'lock-poster' ? 'text-black' : 'opacity-40 hover:opacity-100'}`}>🔒 POSTER</button>
           <div className="w-px h-4 bg-black/10"></div>
           <span className="text-base tabular-nums">{time}</span>
         </div>
