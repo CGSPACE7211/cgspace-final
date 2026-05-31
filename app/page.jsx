@@ -149,7 +149,7 @@ export default function DigitalSignage() {
           {logoImg ? <img src={logoImg} className="h-14 object-contain" alt="Logo" /> : <span className="text-2xl font-black italic">°C / g . SPACE</span>}
           <div className="w-px h-4 bg-black/10"></div>
           {/* 🌤️ 这里接入了真实的实时天气！ */}
-          <span className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase">
+          <span className="font-mono text-[20px] tracking-widest text-zinc-400 uppercase">
             {weather.icon} NY {weather.temp}°F {weather.desc} // SCR-{screenId}
           </span>
         </div>
