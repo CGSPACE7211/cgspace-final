@@ -165,7 +165,7 @@ export default function DigitalSignage() {
           <div className="flex items-center space-x-6 bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/40 shadow-sm">
             {logoImg ? <img src={logoImg} className="h-14 object-contain" alt="Logo" /> : <span className="text-2xl font-black italic">°C / g . SPACE</span>}
             <div className="w-px h-4 bg-black/10"></div>
-            <span className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase">
+            <span className="font-mono text-[12px] tracking-widest text-zinc-400 uppercase">
               {weather.icon} NY {weather.temp}°F {weather.desc} {screenId !== 'ALL' && `// SCR-${screenId}`}
             </span>
           </div>
