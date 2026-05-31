@@ -146,7 +146,7 @@ export default function DigitalSignage() {
       {/* ☁️ 顶部状态栏 */}
       <div className="absolute top-0 left-0 w-full px-16 py-8 flex justify-between items-center z-50">
         <div className="flex items-center space-x-6 bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/40 shadow-sm">
-          {logoImg ? <img src={logoImg} className="h-12 object-contain" alt="Logo" /> : <span className="text-2xl font-black italic">°C / g . SPACE</span>}
+          {logoImg ? <img src={logoImg} className="h-30 object-contain" alt="Logo" /> : <span className="text-2xl font-black italic">°C / g . SPACE</span>}
           <div className="w-px h-4 bg-black/10"></div>
           {/* 🌤️ 这里接入了真实的实时天气！ */}
           <span className="font-mono text-[16px] tracking-widest text-zinc-400 uppercase">
