@@ -38,7 +38,7 @@ export default function DigitalSignage() {
     const fetchWeather = async () => {
       try {
         // ⚠️⚠️⚠️ 主理人看这里：把下面引号里的内容，替换成你申请到的真实 API Key！
-        const API_KEY = "替换成你的API_KEY"; 
+        const API_KEY = ee819ecc6d167703afcc1d64cc91072d; 
         
         if (API_KEY === "替换成你的API_KEY") return; // 如果没填，就不执行
 
