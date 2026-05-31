@@ -3,136 +3,119 @@ import { useState, useEffect } from 'react';
 
 export default function DigitalSignage() {
   const [menuData, setMenuData] = useState({});
-  const [posters, setPosters] = useState([]);
-  const [unitImg, setUnitImg] = useState(null);
-  const [logoImg, setLogoImg] = useState(null);
-  
+  const [allImages, setAllImages] = useState([]);
   const [time, setTime] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [weather, setWeather] = useState({ temp: '72°F', condition: 'Sunny', icon: '☀️' });
+  
   const [currentSlide, setCurrentSlide] = useState(0); 
-  const [posterIdx, setPosterIdx] = useState(0);
-  const [playMode, setPlayMode] = useState('loop');
+  const [currentImageIdx, setCurrentImageIdx] = useState(0); 
+  const [playMode, setPlayMode] = useState('loop'); 
 
-  // 1. 系统精准时钟
+  // ==========================================
+  // 🎨 主理人专属配置区 (以后换小人图片就在这里填网址)
+  // ==========================================
+  const UNIT_ILLUSTRATION_URL = "https://images.unsplash.com/photo-1596450514735-a11aaa8bf803?auto=format&fit=crop&w=800&q=80"; // ⚠️ 请把这串网址替换为你小人插画的真实链接！
+  const BRAND_LOGO_TEXT = "Cg Space";
+  // ==========================================
+
+  // 1. 系统时钟 & 模拟天气预报动态
   useEffect(() => {
     const timer = setInterval(() => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setTime(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // 2. 核心：从后端收取全自动打包好的云端资产
+  // 2. Notion 数据抓取 & 建立图片轮播池
   useEffect(() => {
-    const fetchMatrix = async () => {
+    const fetchMenu = async () => {
       try {
         const res = await fetch('/api/menu');
         const json = await res.json();
         if (json.success) {
-          // 整理菜单分类
-          const grouped = json.menuItems.reduce((acc, item) => {
+          const grouped = json.data.reduce((acc, item) => {
             if (!acc[item.category]) acc[item.category] = [];
             acc[item.category].push(item);
             return acc;
           }, {});
           setMenuData(grouped);
-          
-          // 注入大图连播池、小人、Logo
-          setPosters(json.posterImages || []);
-          setUnitImg(json.unitImage);
-          setLogoImg(json.logoImage);
+
+          // 核心修复：把所有有图片的商品，提取出来放进轮播池！
+          const images = json.data.map(item => item.imageUrl).filter(Boolean);
+          if(images.length > 0) setAllImages(images);
         }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+      } catch (err) { console.error("Sync Error"); }
     };
-    fetchMatrix();
-    const syncTimer = setInterval(fetchMatrix, 4000);
-    return () => clearInterval(syncTimer);
+    fetchMenu();
+    const dataTimer = setInterval(fetchMenu, 5000);
+    return () => clearInterval(dataTimer);
   }, []);
 
-  // 3. 大版面转场控制（菜单 ➔ 海报）
+  // 3. 大屏转场（菜单 ➔ 海报）
   useEffect(() => {
     if (playMode !== 'loop') return;
     const slideTimer = setInterval(() => {
-      // 只有当用户在Notion里上传了海报大图，才开启大版面连播，否则一直停留在精致菜单页
       setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
-    }, 10000); // 10秒更换一次大版面
+    }, 10000); // 每 10 秒切换一次大版面
     return () => clearInterval(slideTimer);
   }, [playMode]);
 
-  // 4. 🚀 核心修复：全屏海报多大图丝滑轮播池！
+  // 4. 修复全屏海报多图连播！
   useEffect(() => {
-    if (posters.length <= 1) return;
-    const pTimer = setInterval(() => {
-      setPosterIdx((prev) => (prev + 1) % posters.length);
-    }, 4500); // 你在Notion建的几行海报，每4.5秒自动切下一张
-    return () => clearInterval(pTimer);
-  }, [posters]);
+    if (allImages.length <= 1) return; // 只有1张图就不播
+    const imageTimer = setInterval(() => {
+      setCurrentImageIdx((prev) => (prev + 1) % allImages.length);
+    }, 4000); // 海报里的图片每 4 秒换一张
+    return () => clearInterval(imageTimer);
+  }, [allImages]);
 
-  if (loading) return (
-    <div className="h-screen w-screen bg-[#F4F1EA] flex flex-col items-center justify-center text-zinc-400 font-mono tracking-[0.3em] text-xs">
-      °C / g . SPACE // PREMIUM SIGNAGE MATRIX INITIALIZING...
-    </div>
-  );
+  // 兜底全屏大图
+  const displayImages = allImages.length > 0 ? allImages : ["https://images.unsplash.com/photo-1517256064527-09c53b2d0c6b?auto=format&fit=crop&w=2000&q=80"];
 
   return (
-    <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] p-16 flex flex-col justify-between overflow-hidden select-none">
+    <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] flex flex-col justify-between overflow-hidden select-none">
       
-      {/* ☁️ 顶级高定悬浮状态栏（高透光玻璃拟态，包含真实感动态气象站） */}
-      <div className="absolute top-0 left-0 w-full px-16 py-8 flex justify-between items-center z-50">
-        <div className="flex items-center space-x-6 bg-white/40 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/40 shadow-sm transition-all">
-          {logoImg ? (
-            // 🚀 如果你在Notion传了Logo行，这里直接秒变你的专属高端Logo！
-            <img src={logoImg} alt="Brand Logo" className="h-6 object-contain" />
-          ) : (
-            <span className="text-2xl font-black font-serif italic tracking-tighter text-black">°C / g . SPACE</span>
-          )}
-          <div className="w-px h-4 bg-black/10"></div>
-          <div className="flex items-center space-x-2 font-mono text-[11px] tracking-widest text-zinc-500 uppercase">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>NY_LAB</span>
-            <span>☀️ 74°F SUNNY</span>
-          </div>
+      {/* ☁️ 顶部高级悬浮状态栏 (包含天气预报、时钟、智控) */}
+      <div className="absolute top-0 w-full px-12 py-8 flex justify-between items-start z-50 pointer-events-auto">
+        <div className="flex items-center space-x-6 backdrop-blur-md bg-white/30 px-4 py-2 rounded-full border border-white/40 shadow-sm">
+          <span className="text-xl font-black font-serif italic tracking-tighter">{BRAND_LOGO_TEXT}</span>
+          <div className="w-px h-4 bg-black/20"></div>
+          <span className="font-mono text-xs font-bold tracking-widest uppercase">New York</span>
+          <span className="font-mono text-xs">{weather.icon} {weather.temp} {weather.condition}</span>
         </div>
         
-        {/* 精致智控切换舱 */}
-        <div className="flex items-center space-x-6 bg-white/40 backdrop-blur-md px-5 py-2 rounded-full border border-white/40 shadow-sm font-mono text-[11px]">
-          <button onClick={() => setPlayMode('loop')} className={`transition-all tracking-wider ${playMode === 'loop' ? 'text-amber-600 font-extrabold' : 'text-black/40'}`}>🔄 AUTOPLAY</button>
-          <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`transition-all tracking-wider ${playMode === 'lock-menu' ? 'text-black font-extrabold' : 'text-black/40'}`}>MENU</button>
-          <button onClick={() => { setPlayMode('lock-poster'); setCurrentSlide(1); }} className={`transition-all tracking-wider ${playMode === 'lock-poster' ? 'text-black font-extrabold' : 'text-black/40'}`}>GALLERY</button>
-          <div className="w-px h-4 bg-black/10"></div>
-          <span className="font-bold tracking-tight text-sm tabular-nums text-black">{time}</span>
+        <div className="flex items-center space-x-6 backdrop-blur-md bg-white/30 px-4 py-2 rounded-full border border-white/40 shadow-sm font-mono text-xs">
+          <button onClick={() => { setPlayMode('loop'); }} className={`transition-all ${playMode === 'loop' ? 'text-amber-600 font-bold' : 'text-black/50'}`}>AUTO</button>
+          <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`transition-all ${playMode === 'lock-menu' ? 'text-black font-bold' : 'text-black/50'}`}>MENU</button>
+          <button onClick={() => { setPlayMode('lock-poster'); setCurrentSlide(1); }} className={`transition-all ${playMode === 'lock-poster' ? 'text-black font-bold' : 'text-black/50'}`}>POSTER</button>
+          <div className="w-px h-4 bg-black/20"></div>
+          <span className="font-bold tracking-wider">{time}</span>
         </div>
       </div>
 
-      {/* 主舞台 */}
-      <div className="flex-1 my-6 relative w-full h-full">
+      <div className="flex-1 relative w-full h-full">
         
-        {/* 🎬 画面一：极致高级杂志排版风菜单（斩断黑边大阴影，呼吸感拉满） */}
-        <div className={`absolute inset-0 pt-28 pb-6 flex items-center transition-all duration-1000 transform ${currentSlide === 0 || posters.length === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-98 pointer-events-none'}`}>
+        {/* 🎬 画面一：极致高级杂志风菜单 + 你的插画小人 */}
+        <div className={`absolute inset-0 pt-32 px-16 pb-16 flex transition-all duration-1000 ${currentSlide === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
           
-          {/* 左侧：无边框高级清透菜单列表 */}
-          <div className="w-7/12 pr-16 flex flex-col justify-center space-y-12">
+          {/* 左侧：无边框高级点单区 */}
+          <div className="w-2/3 pr-20 flex flex-col justify-center space-y-12">
             {Object.keys(menuData).length === 0 ? (
-              <div className="text-zinc-400 font-mono text-xs animate-pulse tracking-widest">LOADING LAB RECEIPT...</div>
+              <div className="text-zinc-400 font-mono text-sm animate-pulse">Syncing elegant menu...</div>
             ) : (
               Object.keys(menuData).map((category) => (
-                <div key={category} className="border-t border-black/10 pt-4">
-                  <h2 className="text-[11px] font-mono tracking-[0.3em] uppercase text-amber-600 mb-6 font-bold">
-                    // {category}
-                  </h2>
-                  <div className="space-y-5">
+                <div key={category}>
+                  <h2 className="text-sm font-mono tracking-[0.3em] uppercase text-amber-600 mb-6 border-b border-black/10 pb-2">{category}</h2>
+                  <div className="space-y-4">
                     {menuData[category].map((item) => (
                       <div key={item.id} className="flex justify-between items-end group">
-                        <div className="flex items-center space-x-4">
-                          <span className="text-3xl font-bold text-zinc-900 tracking-tight font-sans">{item.name}</span>
-                          {item.specialTag && (
-                            <span className="font-mono text-[9px] bg-black text-white px-2 py-0.5 rounded-sm uppercase tracking-wider font-medium">{item.specialTag}</span>
-                          )}
+                        <div className="flex items-center space-x-3">
+                          <span className="text-2xl font-bold text-black font-serif">{item.name}</span>
+                          {item.specialTag && <span className="text-[9px] bg-[#1A1A1A] text-[#F4F1EA] px-1.5 py-0.5 rounded-sm font-mono uppercase tracking-widest">{item.specialTag}</span>}
                         </div>
-                        {/* 极细高级点位对齐虚线 */}
-                        <div className="flex-1 border-b border-dotted border-black/15 mx-4 mb-1.5"></div>
-                        <span className="font-mono text-2xl font-semibold text-black tracking-tight">${item.price.toFixed(2)}</span>
+                        {/* 高级餐厅专用的点阵对齐线 */}
+                        <div className="flex-1 border-b-[1.5px] border-dotted border-black/20 mx-4 mb-2"></div>
+                        <span className="font-mono text-xl font-semibold text-black">${item.price.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -141,60 +124,42 @@ export default function DigitalSignage() {
             )}
           </div>
 
-          {/* 右侧：主理人高定插画小人（Unit）黄金展示舞台 */}
-          <div className="w-5/12 h-full flex flex-col items-center justify-center relative">
-            <div className="absolute w-[80%] h-[60%] bg-gradient-to-tr from-amber-200/20 to-orange-200/10 rounded-full blur-3xl opacity-60 scale-90"></div>
-            {unitImg ? (
-              // 🚀 只要你在Notion上传了UNIT这一行，这里立刻复活你的可爱插画小人，并自带高级空气感漂浮浮动动画！
-              <img 
-                src={unitImg} 
-                alt="Brand Character Unit" 
-                className="relative z-10 max-h-[75%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.08)]"
-                style={{ animation: 'premiumFloat 5s ease-in-out infinite' }}
-              />
-            ) : (
-              // 没上传前的优雅轻商务空状态
-              <div className="border border-dashed border-black/10 rounded-3xl p-10 text-center font-mono text-xs text-zinc-400 max-w-[280px]">
-                [ 🪐 Place Your Unit Illustration Here via Notion Name="UNIT" ]
-              </div>
-            )}
+          {/* 右侧：预留给主理人的 Unit 插画小人展示区！ */}
+          <div className="w-1/3 flex flex-col items-center justify-center relative">
+            <div className="absolute inset-0 bg-amber-100/50 rounded-full blur-3xl scale-75 opacity-50"></div>
+            {/* ⚠️ 这里就是你的小人！ */}
+            <img 
+              src={UNIT_ILLUSTRATION_URL} 
+              alt="Brand Unit" 
+              className="relative z-10 max-h-[70%] object-contain drop-shadow-xl animate-bounce-slow"
+              style={{ animation: 'float 6s ease-in-out infinite' }}
+            />
           </div>
         </div>
 
-        {/* 🎬 画面二：100% 纯享无边界全屏巨幕画廊模式（彻底踩碎笨重黑色色块） */}
-        <div className={`absolute inset-0 -mx-16 -my-16 transition-all duration-1000 ${currentSlide === 1 && posters.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          {posters.map((imgUrl, index) => (
+        {/* 🎬 画面二：100% 纯享全屏大图连播（彻底消灭黑框！） */}
+        <div className={`absolute inset-0 transition-all duration-1000 ${currentSlide === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          {displayImages.map((imgUrl, index) => (
             <img 
               key={index}
               src={imgUrl} 
-              alt="Premium Gallery Bleed" 
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${index === posterIdx ? 'opacity-100' : 'opacity-0'}`}
+              alt="Live Screen" 
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${index === currentImageIdx ? 'opacity-100' : 'opacity-0'}`}
             />
           ))}
-          
-          {/* 左下角极致克制的奢华极简标签 */}
-          <div className="absolute bottom-12 left-16 bg-black/70 backdrop-blur-md text-[#F4F1EA] px-4 py-2 text-[10px] font-mono tracking-[0.25em] rounded-sm uppercase">
-            °C / g . SPACE // ARTWORK 0{posterIdx + 1}
+          {/* 底部保留一个极简的高级水印 */}
+          <div className="absolute bottom-8 left-12 bg-black/60 backdrop-blur-md text-white px-4 py-2 text-xs font-mono tracking-[0.2em] rounded-sm uppercase">
+            {BRAND_LOGO_TEXT} // PREMIUM GALLERY
           </div>
         </div>
 
       </div>
 
-      {/* FOOTER */}
-      <div className="border-t border-black/10 pt-4 flex justify-between items-center font-mono text-[9px] text-zinc-400 tracking-widest uppercase">
-        <div className="flex items-center space-x-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-          <span>SYSTEM // SECURE_MATRIX_CONNECTED_v4.5</span>
-        </div>
-        <div>[ TOTAL ZERO CODE // MANAGED FROM NOTION MOBILE APP ]</div>
-      </div>
-
-      {/* 🚀 高端漂浮微动粒子CSS */}
       <style jsx global>{`
-        @keyframes premiumFloat {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-12px) rotate(1deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
+        @keyframes float {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-15px); }
+          100% { transform: translateY(0px); }
         }
       `}</style>
     </div>
