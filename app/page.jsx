@@ -29,6 +29,7 @@ export default function DigitalSignage() {
         const res = await fetch('/api/menu');
         const json = await res.json();
         if (json.success) {
+          // 整理菜单分类
           const grouped = json.menuItems.reduce((acc, item) => {
             if (!acc[item.category]) acc[item.category] = [];
             acc[item.category].push(item);
@@ -36,6 +37,7 @@ export default function DigitalSignage() {
           }, {});
           setMenuData(grouped);
           
+          // 注入大图连播池、小人、Logo
           setPosters(json.posterImages || []);
           setUnitImg(json.unitImage);
           setLogoImg(json.logoImage);
@@ -52,17 +54,18 @@ export default function DigitalSignage() {
   useEffect(() => {
     if (playMode !== 'loop') return;
     const slideTimer = setInterval(() => {
+      // 只有当用户在Notion里上传了海报大图，才开启大版面连播，否则一直停留在精致菜单页
       setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
     }, 10000); // 10秒更换一次大版面
     return () => clearInterval(slideTimer);
   }, [playMode]);
 
-  // 4. 全屏海报多大图丝滑轮播池
+  // 4. 🚀 核心修复：全屏海报多大图丝滑轮播池！
   useEffect(() => {
     if (posters.length <= 1) return;
     const pTimer = setInterval(() => {
       setPosterIdx((prev) => (prev + 1) % posters.length);
-    }, 4500); // 每4.5秒自动切下一张
+    }, 4500); // 你在Notion建的几行海报，每4.5秒自动切下一张
     return () => clearInterval(pTimer);
   }, [posters]);
 
@@ -75,10 +78,11 @@ export default function DigitalSignage() {
   return (
     <div className="w-screen h-screen bg-[#F4F1EA] text-[#1A1A1A] p-16 flex flex-col justify-between overflow-hidden select-none">
       
-      {/* ☁️ 顶级高定悬浮状态栏 */}
+      {/* ☁️ 顶级高定悬浮状态栏（高透光玻璃拟态，包含真实感动态气象站） */}
       <div className="absolute top-0 left-0 w-full px-16 py-8 flex justify-between items-center z-50">
         <div className="flex items-center space-x-6 bg-white/40 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/40 shadow-sm transition-all">
           {logoImg ? (
+            // 🚀 如果你在Notion传了Logo行，这里直接秒变你的专属高端Logo！
             <img src={logoImg} alt="Brand Logo" className="h-6 object-contain" />
           ) : (
             <span className="text-2xl font-black font-serif italic tracking-tighter text-black">°C / g . SPACE</span>
@@ -91,6 +95,7 @@ export default function DigitalSignage() {
           </div>
         </div>
         
+        {/* 精致智控切换舱 */}
         <div className="flex items-center space-x-6 bg-white/40 backdrop-blur-md px-5 py-2 rounded-full border border-white/40 shadow-sm font-mono text-[11px]">
           <button onClick={() => setPlayMode('loop')} className={`transition-all tracking-wider ${playMode === 'loop' ? 'text-amber-600 font-extrabold' : 'text-black/40'}`}>🔄 AUTOPLAY</button>
           <button onClick={() => { setPlayMode('lock-menu'); setCurrentSlide(0); }} className={`transition-all tracking-wider ${playMode === 'lock-menu' ? 'text-black font-extrabold' : 'text-black/40'}`}>MENU</button>
@@ -103,9 +108,10 @@ export default function DigitalSignage() {
       {/* 主舞台 */}
       <div className="flex-1 my-6 relative w-full h-full">
         
-        {/* 🎬 画面一：高级杂志排版风菜单 */}
+        {/* 🎬 画面一：极致高级杂志排版风菜单（斩断黑边大阴影，呼吸感拉满） */}
         <div className={`absolute inset-0 pt-28 pb-6 flex items-center transition-all duration-1000 transform ${currentSlide === 0 || posters.length === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-98 pointer-events-none'}`}>
           
+          {/* 左侧：无边框高级清透菜单列表 */}
           <div className="w-7/12 pr-16 flex flex-col justify-center space-y-12">
             {Object.keys(menuData).length === 0 ? (
               <div className="text-zinc-400 font-mono text-xs animate-pulse tracking-widest">LOADING LAB RECEIPT...</div>
@@ -124,6 +130,7 @@ export default function DigitalSignage() {
                             <span className="font-mono text-[9px] bg-black text-white px-2 py-0.5 rounded-sm uppercase tracking-wider font-medium">{item.specialTag}</span>
                           )}
                         </div>
+                        {/* 极细高级点位对齐虚线 */}
                         <div className="flex-1 border-b border-dotted border-black/15 mx-4 mb-1.5"></div>
                         <span className="font-mono text-2xl font-semibold text-black tracking-tight">${item.price.toFixed(2)}</span>
                       </div>
@@ -138,6 +145,7 @@ export default function DigitalSignage() {
           <div className="w-5/12 h-full flex flex-col items-center justify-center relative">
             <div className="absolute w-[80%] h-[60%] bg-gradient-to-tr from-amber-200/20 to-orange-200/10 rounded-full blur-3xl opacity-60 scale-90"></div>
             {unitImg ? (
+              // 🚀 只要你在Notion上传了UNIT这一行，这里立刻复活你的可爱插画小人，并自带高级空气感漂浮浮动动画！
               <img 
                 src={unitImg} 
                 alt="Brand Character Unit" 
@@ -145,6 +153,7 @@ export default function DigitalSignage() {
                 style={{ animation: 'premiumFloat 5s ease-in-out infinite' }}
               />
             ) : (
+              // 没上传前的优雅轻商务空状态
               <div className="border border-dashed border-black/10 rounded-3xl p-10 text-center font-mono text-xs text-zinc-400 max-w-[280px]">
                 [ 🪐 Place Your Unit Illustration Here via Notion Name="UNIT" ]
               </div>
@@ -152,7 +161,7 @@ export default function DigitalSignage() {
           </div>
         </div>
 
-        {/* 🎬 画面二：100% 纯享无边界全屏巨幕画廊 */}
+        {/* 🎬 画面二：100% 纯享无边界全屏巨幕画廊模式（彻底踩碎笨重黑色色块） */}
         <div className={`absolute inset-0 -mx-16 -my-16 transition-all duration-1000 ${currentSlide === 1 && posters.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {posters.map((imgUrl, index) => (
             <img 
@@ -163,6 +172,7 @@ export default function DigitalSignage() {
             />
           ))}
           
+          {/* 左下角极致克制的奢华极简标签 */}
           <div className="absolute bottom-12 left-16 bg-black/70 backdrop-blur-md text-[#F4F1EA] px-4 py-2 text-[10px] font-mono tracking-[0.25em] rounded-sm uppercase">
             °C / g . SPACE // ARTWORK 0{posterIdx + 1}
           </div>
@@ -170,6 +180,7 @@ export default function DigitalSignage() {
 
       </div>
 
+      {/* FOOTER */}
       <div className="border-t border-black/10 pt-4 flex justify-between items-center font-mono text-[9px] text-zinc-400 tracking-widest uppercase">
         <div className="flex items-center space-x-2">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
@@ -178,6 +189,7 @@ export default function DigitalSignage() {
         <div>[ TOTAL ZERO CODE // MANAGED FROM NOTION MOBILE APP ]</div>
       </div>
 
+      {/* 🚀 高端漂浮微动粒子CSS */}
       <style jsx global>{`
         @keyframes premiumFloat {
           0% { transform: translateY(0px) rotate(0deg); }
